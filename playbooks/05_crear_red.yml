@@ -1,0 +1,28 @@
+- name: Ejercicio 5 - Networking Básico
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  collections:
+    - openstack.cloud
+
+  tasks:
+    # TAREA 1: CREAR EL CABLE (LA RED)
+    - name: Crear red privada 'Red-Becarios'
+      openstack.cloud.network:
+        cloud: openstack
+        state: present
+        name: Red-Becarios
+        project: Laboratorio    # La red pertenece a este proyecto
+
+    # TAREA 2: CREAR LAS REGLAS IP (LA SUBRED)
+    - name: Crear subred 'Subnet-Becarios'
+      openstack.cloud.subnet:
+        cloud: openstack
+        state: present
+        name: Subnet-Becarios
+        network_name: Red-Becarios  # Se conecta a la red de arriba
+        cidr: 10.10.10.0/24         # Rango de IPs
+        dns_nameservers:            # Lista de DNS
+          - 8.8.8.8
+          - 1.1.1.1
+        project: Laboratorio

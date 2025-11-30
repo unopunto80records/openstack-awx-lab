@@ -1,0 +1,25 @@
+- name: Ejercicio 6 - Subir Imagen (Sistema Operativo)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  collections:
+    - openstack.cloud
+
+  tasks:
+    # TAREA 1: Descargar la imagen de internet a tu disco local (temporalmente)
+    - name: Descargar CirrOS desde internet
+      get_url:
+        url: http://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img
+        dest: /tmp/cirros.img
+        mode: '0644'
+
+    # TAREA 2: Subir ese archivo a OpenStack (Glance)
+    - name: Crear imagen 'cirros' en OpenStack
+      openstack.cloud.image:
+        cloud: openstack
+        state: present
+        name: cirros-0.6.2
+        container_format: bare
+        disk_format: qcow2
+        filename: /tmp/cirros.img  # Coge el archivo que bajamos antes
+        is_public: true            # ¡Importante! Para que el becario pueda usarla

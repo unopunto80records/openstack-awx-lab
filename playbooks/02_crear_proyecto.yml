@@ -1,0 +1,17 @@
+
+- name: Ejercicio 2 - Crear Proyecto
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  collections:
+    - openstack.cloud
+
+  tasks:
+    - name: Crear proyecto 'Laboratorio'
+      openstack.cloud.project:
+        cloud: openstack
+        state: present
+        name: Laboratorio
+        description: "Proyecto para pruebas de Ansible"
+        domain_id: default
+        enabled: true

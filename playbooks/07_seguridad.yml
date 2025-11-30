@@ -1,0 +1,36 @@
+- name: Ejercicio 7 - Configurar Firewall (Security Groups)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  collections:
+    - openstack.cloud
+
+  tasks:
+    # TAREA 1: Crear el "Grupo" (la carpeta de reglas)
+    - name: Crear grupo de seguridad 'reglas-basicas'
+      openstack.cloud.security_group:
+        cloud: openstack
+        state: present
+        name: reglas-basicas
+        description: "Permitir Ping y SSH"
+        project: Laboratorio
+
+    # TAREA 2: Añadir regla de PING (ICMP)
+    - name: Permitir Ping (ICMP)
+      openstack.cloud.security_group_rule:
+        cloud: openstack
+        security_group: reglas-basicas
+        protocol: icmp
+        remote_ip_prefix: 0.0.0.0/0   # 0.0.0.0/0 significa "Desde cualquier lugar del mundo"
+        project: Laboratorio
+
+    # TAREA 3: Añadir regla de SSH (TCP 22)
+    - name: Permitir SSH (Puerto 22)
+      openstack.cloud.security_group_rule:
+        cloud: openstack
+        security_group: reglas-basicas
+        protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+        remote_ip_prefix: 0.0.0.0/0
+        project: Laboratorio

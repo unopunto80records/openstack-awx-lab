@@ -1,0 +1,18 @@
+- name: Ejercicio 4 - Crear Flavor (Catálogo de Hardware)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  collections:
+    - openstack.cloud
+
+  tasks:
+    # Usamos el módulo 'compute_flavor' para hablar con NOVA (el servicio de cómputo)
+    - name: Crear flavor 'm1.nano'
+      openstack.cloud.compute_flavor:
+        cloud: openstack
+        state: present
+        name: m1.nano      # Nombre que verá el usuario
+        ram: 128           # Memoria en Megabytes (muy poco, solo para pruebas)
+        vcpus: 1           # Número de CPUs virtuales
+        disk: 1            # Disco duro principal en Gigabytes
+        is_public: true    # 'true' significa que todos los proyectos pueden usarlo

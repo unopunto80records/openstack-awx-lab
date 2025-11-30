@@ -1,0 +1,27 @@
+clouds:
+  openstack:
+    auth:
+      auth_url: http://192.168.94.133:5000/v3
+      username: "admin"
+      password: "CHANGE-PASSWD"
+      project_name: "admin"
+      project_domain_name: "Default"
+      user_domain_name: "Default"
+    region_name: "RegionOne"
+    interface: "internal"
+    identity_api_version: 3
+    verify: false
+
+
+  becario:
+    auth:
+      auth_url: http://192.168.94.133:5000/v3
+      username: "becario"
+      password: "CHANGE-PASSWD"
+      project_name: "Laboratorio"
+      project_domain_name: "Default"
+      user_domain_name: "Default"
+    region_name: "RegionOne"
+    interface: "internal"
+    identity_api_version: 3
+    verify: false

@@ -1,0 +1,58 @@
+- name: Ejercicio 8 - Lanzar Instancia (El Gran Final)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  collections:
+    - openstack.cloud
+
+  tasks:
+    # TAREA 1: CREAR LA LLAVE SSH
+    - name: Crear Keypair 'llave-becario'
+      openstack.cloud.keypair:
+        cloud: becario
+        state: present
+        name: llave-becario
+      register: mi_llave
+
+    # TAREA 2: GUARDAR LA LLAVE EN UN ARCHIVO
+    - name: Guardar la clave privada en un archivo
+      copy:
+        content: "{{ mi_llave.keypair.private_key }}"
+        dest: "./becario.pem"
+        mode: '0600'
+      when: mi_llave.changed
+
+    # TAREA 3: LANZAR LA MÁQUINA VIRTUAL
+    - name: Crear la instancia 'VM-Prueba'
+      openstack.cloud.server:
+        cloud: becario
+        state: present
+        name: VM-Prueba
+        image: cirros-0.6.2
+        flavor: m1.nano
+        network: Red-Becarios
+        security_groups: reglas-basicas
+        key_name: llave-becario
+        # project: Laboratorio  <-- ELIMINADO PARA EVITAR ERROR
+        wait: yes
+        timeout: 200
+      register: vm_info
+
+    # TAREA 4: CREAR IP FLOTANTE
+    - name: Asignar IP Flotante
+      openstack.cloud.floating_ip:
+        cloud: becario
+        state: present
+        server: VM-Prueba
+        network: public      # Esta red 'public' la creó el script de instalación al principio
+        wait: yes
+      register: ip_publica
+
+    # TAREA 5: (debug para mostrar la IP pública)
+    - name: Mostrar información de la VM
+      debug:
+        msg: 
+          - "¡MÁQUINA ACCESIBLE!"
+          - "IP Privada: {{ vm_info.server.addresses['Red-Becarios'][0].addr }}"
+          - "IP PÚBLICA: {{ ip_publica.floating_ip.floating_ip_address }}"
+          - "Comando SSH: ssh -i becario.pem cirros@{{ ip_publica.floating_ip.floating_ip_address }}"

@@ -1,0 +1,19 @@
+---
+- name: Ejercicio 1 - Test de Conexión (Modo Debug)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  collections:
+    - openstack.cloud
+
+  tasks:
+    # Tarea 1: Pedir información a la nube
+    - name: Obtener información de identidad
+      openstack.cloud.auth:
+        cloud: openstack
+      register: mis_datos
+
+    # Tarea 2: Imprimir la estructura completa para ver qué nos devuelve
+    - name: Ver datos recibidos
+      debug:
+        var: mis_datos

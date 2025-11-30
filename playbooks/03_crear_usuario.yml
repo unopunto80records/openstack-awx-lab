@@ -1,0 +1,29 @@
+---
+- name: Ejercicio 3 - Gestión de Usuarios
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  collections:
+    - openstack.cloud  # Usamos la colección que instalamos con ansible-galaxy
+
+  tasks:
+    # TAREA 1: CREAR EL USUARIO
+    # Usamos el módulo 'identity_user' que sirve para gestionar gente en Keystone
+    - name: Crear usuario 'becario'
+      openstack.cloud.identity_user:
+        cloud: openstack           # Usa las credenciales de clouds.yaml
+        state: present             # "Quiero que exista"
+        name: becario
+        password: "PasswordSegura123!"
+        email: becario@empresa.com
+        default_project: Laboratorio  # Lo asignamos al proyecto que creamos en el Ejercicio 2
+        domain: default            # Usamos 'domain' en vez de 'domain_id'
+
+    # TAREA 2: ASIGNAR ROL
+    # Un usuario sin rol no puede hacer nada. Le damos el rol 'member'.
+    - name: Asignar rol 'member' al becario en Laboratorio
+      openstack.cloud.role_assignment:
+        cloud: openstack
+        user: becario
+        role: member
+        project: Laboratorio

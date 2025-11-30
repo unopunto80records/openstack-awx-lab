@@ -1,0 +1,13 @@
+# Ignorar claves privadas y certificados
+*.pem
+*.key
+id_rsa
+
+# Ignorar archivos de configuración con claves reales
+clouds.yaml
+admin-openrc.sh
+
+# Ignorar carpetas temporales o de sistema
+__pycache__/
+*.log
+.DS_Store
