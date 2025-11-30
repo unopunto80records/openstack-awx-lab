@@ -1,0 +1,46 @@
+---
+- name: Ejercicio 9 - Despliegue Dinámico (Survey)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    # 1. Crear una llave única para esta máquina
+    - name: Crear Keypair dinámica
+      os_keypair:
+        cloud: becario
+        state: present
+        name: "key-{{ nombre_maquina }}"
+      register: key_info
+
+    # 2. Guardar la llave (solo si es nueva)
+    - name: Guardar la clave privada
+      copy:
+        content: "{{ key_info.key.private_key }}"
+        dest: "/tmp/{{ nombre_maquina }}.pem"
+        mode: '0600'
+      when: key_info.changed
+
+    # 3. Lanzar la VM con los datos que elija el usuario
+    - name: Crear instancia '{{ nombre_maquina }}'
+      os_server:
+        cloud: becario
+        state: present
+        name: "{{ nombre_maquina }}"   # <--- Variable
+        image: cirros-0.6.2
+        flavor: "{{ tamano }}"         # <--- Variable
+        network: Red-Becarios
+        security_groups: reglas-basicas
+        key_name: "key-{{ nombre_maquina }}"
+        auto_ip: yes                   # Asigna IP flotante automáticamente
+        wait: yes
+        timeout: 200
+      register: vm_info
+
+    # 4. Mostrar resultado al usuario
+    - name: Mostrar datos de conexión
+      debug:
+        msg: 
+          - "¡MÁQUINA {{ nombre_maquina }} DESPLEGADA!"
+          - "IP Pública: {{ vm_info.server.accessIPv4 }}"
+          - "Llave guardada en: /tmp/{{ nombre_maquina }}.pem"
