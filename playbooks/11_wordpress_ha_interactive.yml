@@ -1,0 +1,105 @@
+- name: Ejercicio 11 - Cluster WordPress HA Interactivo
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Script que se inyecta en las máquinas para instalar todo solo
+    wordpress_install_script: |
+      #!/bin/bash
+      # 1. Esperar a que apt termine sus actualizaciones automáticas (evita error de bloqueo)
+      while fuser /var/lib/dpkg/lock >/dev/null 2>&1 ; do sleep 5; done
+      while fuser /var/lib/apt/lists/lock >/dev/null 2>&1 ; do sleep 5; done
+      
+      # 2. Instalar Docker
+      apt-get update
+      apt-get install -y docker.io
+      systemctl start docker
+      systemctl enable docker
+      
+      # 3. Desplegar Base de Datos y WordPress
+      # (En un HA real la BD estaría fuera, aquí simulamos nodos completos)
+      docker run -d --name db -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=wordpress -e MYSQL_USER=wp_user -e MYSQL_PASSWORD=wp_pass mysql:5.7
+      docker run -d --name wordpress --link db:mysql -p 80:80 -e WORDPRESS_DB_HOST=db:3306 -e WORDPRESS_DB_USER=wp_user -e WORDPRESS_DB_PASSWORD=wp_pass wordpress:latest
+
+  tasks:
+    # ---------------------------------------------------------
+    # PARTE 1: TAREAS DE ADMINISTRADOR (cloud: openstack)
+    # ---------------------------------------------------------
+    
+    - name: "[ADMIN] Asegurar Flavor 'm1.medium' (4GB RAM para ir sobrados)"
+      os_nova_flavor:
+        cloud: openstack
+        state: present
+        name: m1.medium
+        ram: 4096
+        vcpus: 2
+        disk: 20
+        is_public: yes
+
+    - name: "[ADMIN] Descargar Imagen desde URL (Interactivo)"
+      get_url:
+        url: "{{ url_imagen }}"   # <--- VARIABLE DEL FORMULARIO
+        dest: "/tmp/imagen_descargada.img"
+        timeout: 1200             # 20 minutos por si el internet va lento
+      when: url_imagen is defined
+
+    - name: "[ADMIN] Subir Imagen a OpenStack"
+      os_image:
+        cloud: openstack
+        state: present
+        name: "{{ nombre_imagen }}" # <--- VARIABLE DEL FORMULARIO
+        container_format: bare
+        disk_format: qcow2
+        filename: "/tmp/imagen_descargada.img"
+        is_public: yes
+
+    # ---------------------------------------------------------
+    # PARTE 2: TAREAS DE USUARIO (cloud: becario)
+    # ---------------------------------------------------------
+
+    - name: "[USER] Configurar Firewall Web"
+      os_security_group:
+        cloud: becario
+        state: present
+        name: reglas-ha-web
+
+    - name: "[USER] Abrir puerto 80"
+      os_security_group_rule:
+        cloud: becario
+        security_group: reglas-ha-web
+        protocol: tcp
+        port_range_min: 80
+        port_range_max: 80
+        remote_ip_prefix: 0.0.0.0/0
+
+    - name: "[USER] Crear Llave SSH"
+      os_keypair:
+        cloud: becario
+        state: present
+        name: llave-cluster
+
+    - name: "[USER] Lanzar Nodos del Cluster (WP-01 y WP-02)"
+      os_server:
+        cloud: becario
+        state: present
+        name: "WP-Node-{{ item }}"
+        image: "{{ nombre_imagen }}"
+        flavor: m1.medium
+        network: Red-Becarios
+        security_groups: reglas-ha-web
+        key_name: llave-cluster
+        userdata: "{{ wordpress_install_script }}"
+        auto_ip: yes
+        wait: yes
+        timeout: 600
+      loop: [ "01", "02" ]
+      register: cluster_nodes
+
+    - name: Mostrar Accesos
+      debug:
+        msg: 
+          - "¡CLUSTER DESPLEGADO!"
+          - "Nodo 1: http://{{ cluster_nodes.results[0].server.accessIPv4 }}"
+          - "Nodo 2: http://{{ cluster_nodes.results[1].server.accessIPv4 }}"
+          - "NOTA: Tardan unos 5 minutos en instalar Docker y arrancar."

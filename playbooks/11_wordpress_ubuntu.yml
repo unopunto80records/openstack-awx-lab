@@ -1,0 +1,98 @@
+- name: Ejercicio 11 - Despliegue WordPress en Ubuntu
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Este script se ejecutará DENTRO del Ubuntu al arrancar
+    # Instala Docker y arranca WordPress
+    wordpress_install_script: |
+      #!/bin/bash
+      # 1. Actualizar e instalar Docker
+      apt-get update
+      apt-get install -y docker.io
+      systemctl start docker
+      systemctl enable docker
+      
+      # 2. Arrancar Base de Datos (MySQL)
+      docker run -d --name db \
+        -e MYSQL_ROOT_PASSWORD=secret \
+        -e MYSQL_DATABASE=wordpress \
+        -e MYSQL_USER=wp_user \
+        -e MYSQL_PASSWORD=wp_pass \
+        mysql:5.7
+
+      # 3. Arrancar WordPress conectado a la DB
+      docker run -d --name wordpress \
+        --link db:mysql \
+        -p 80:80 \
+        -e WORDPRESS_DB_HOST=db:3306 \
+        -e WORDPRESS_DB_USER=wp_user \
+        -e WORDPRESS_DB_PASSWORD=wp_pass \
+        wordpress:latest
+
+  tasks:
+    # TAREA 1: Crear un Hardware decente (2GB RAM)
+    - name: Crear Flavor 'm1.small'
+      os_nova_flavor:
+        cloud: becario
+        state: present
+        name: m1.small
+        ram: 2048
+        vcpus: 1
+        disk: 10
+        is_public: yes
+
+    # TAREA 2: Descargar imagen de Ubuntu (Esto tardará la primera vez)
+    - name: Descargar imagen Ubuntu 22.04
+      get_url:
+        url: https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.disk.img
+        dest: /tmp/ubuntu-22.04.img
+        timeout: 600  # Damos tiempo porque pesa 600MB
+
+    # TAREA 3: Subir imagen a OpenStack
+    - name: Subir imagen a Glance
+      os_image:
+        cloud: becario
+        state: present
+        name: Ubuntu-22.04
+        container_format: bare
+        disk_format: qcow2
+        filename: /tmp/ubuntu-22.04.img
+        is_public: yes
+
+    # TAREA 4: Crear Grupo de Seguridad Web
+    - name: Crear Firewall Web
+      os_security_group:
+        cloud: becario
+        state: present
+        name: reglas-wordpress
+
+    - name: Abrir HTTP (80)
+      os_security_group_rule:
+        cloud: becario
+        security_group: reglas-wordpress
+        protocol: tcp
+        port_range_min: 80
+        port_range_max: 80
+        remote_ip_prefix: 0.0.0.0/0
+
+    # TAREA 5: Lanzar la Instancia
+    - name: Lanzar Servidor WordPress
+      os_server:
+        cloud: becario
+        state: present
+        name: SRV-WordPress
+        image: Ubuntu-22.04
+        flavor: m1.small
+        network: Red-Becarios
+        security_groups: reglas-wordpress
+        key_name: llave-becario
+        userdata: "{{ wordpress_install_script }}"
+        auto_ip: yes
+        wait: yes
+        timeout: 300
+      register: wp_server
+
+    - debug:
+        msg: "WordPress desplegado en: http://{{ wp_server.server.accessIPv4 }} (Espera 2-3 minutos a que se instale)"
