@@ -1,29 +1,26 @@
----
-- name: Ejercicio 10 - Cluster Web con Balanceo
+- name: Desplegar Cluster Web (Compatible AWX 17)
   hosts: localhost
   connection: local
   gather_facts: no
 
   vars:
-    # Script que se ejecutará dentro de la VM al nacer
+    # Script que se ejecuta dentro de la máquina al nacer
     mi_userdata: |
-      #!/bin/bash
+      #!/bin/sh
       echo "Hola Mundo" > /tmp/inicio.txt
-      # En CirrOS no hay apt/yum, así que simularemos el servicio web con netcat
-      # En un Ubuntu real pondríamos: apt install apache2
-      while true; do echo -e "HTTP/1.1 200 OK\n\n Hola desde $(hostname)" | nc -l -p 80; done &
+      while true; do echo -e "HTTP/1.1 200 OK\n\n Hola soy el servidor $(hostname)" | nc -l -p 80; done &
 
   tasks:
-    # 1. Crear Grupo de Seguridad para Web (Puerto 80)
+    # 1. Crear Grupo de Seguridad (Módulo clásico)
     - name: Crear firewall web
-      openstack.cloud.security_group:
+      os_security_group:
         cloud: becario
         state: present
         name: reglas-web
         description: "Permitir HTTP"
 
     - name: Abrir puerto 80
-      openstack.cloud.security_group_rule:
+      os_security_group_rule:
         cloud: becario
         security_group: reglas-web
         protocol: tcp
@@ -31,76 +28,43 @@
         port_range_max: 80
         remote_ip_prefix: 0.0.0.0/0
 
-    # 2. Lanzar 2 Servidores en Bucle
-    - name: Lanzar Servidores Web
+    # 2. Lanzar Servidor 1
+    - name: Crear Web-01
       os_server:
         cloud: becario
         state: present
-        name: "web-{{ item }}"
+        name: Web-01
         image: cirros-0.6.2
         flavor: m1.nano
         network: Red-Becarios
         security_groups: reglas-web
         key_name: llave-becario
-        userdata: "{{ mi_userdata }}"  # <--- MAGIA: Inyectamos el script
+        userdata: "{{ mi_userdata }}"
+        auto_ip: yes
         wait: yes
-      loop: [ "01", "02" ]
-      register: web_servers
+        timeout: 200
+      register: web01
 
-    # 3. Crear el Balanceador (Load Balancer)
-    - name: Crear Load Balancer
-      openstack.cloud.loadbalancer:
+    # 3. Lanzar Servidor 2
+    - name: Crear Web-02
+      os_server:
         cloud: becario
         state: present
-        name: lb-web
-        vip_subnet: Subnet-Becarios
+        name: Web-02
+        image: cirros-0.6.2
+        flavor: m1.nano
+        network: Red-Becarios
+        security_groups: reglas-web
+        key_name: llave-becario
+        userdata: "{{ mi_userdata }}"
+        auto_ip: yes
         wait: yes
-      register: lb
+        timeout: 200
+      register: web02
 
-    # 4. Crear el Listener (La oreja del balanceador)
-    - name: Crear Listener HTTP
-      openstack.cloud.lb_listener:
-        cloud: becario
-        state: present
-        name: listener-http
-        loadbalancer: lb-web
-        protocol: HTTP
-        protocol_port: 80
-        wait: yes
-
-    # 5. Crear la Pool (El grupo de servidores)
-    - name: Crear Pool
-      openstack.cloud.lb_pool:
-        cloud: becario
-        state: present
-        name: pool-web
-        lb_algorithm: ROUND_ROBIN
-        protocol: HTTP
-        listener: listener-http
-        wait: yes
-
-    # 6. Añadir los servidores a la Pool
-    - name: Añadir miembros a la pool
-      openstack.cloud.lb_member:
-        cloud: becario
-        state: present
-        name: "member-{{ item.server.name }}"
-        pool: pool-web
-        address: "{{ item.server.addresses['Red-Becarios'][0].addr }}"
-        protocol_port: 80
-        subnet: Subnet-Becarios
-        wait: yes
-      loop: "{{ web_servers.results }}"
-
-    # 7. Asignar IP Flotante al Balanceador
-    - name: Asignar IP al LB
-      openstack.cloud.floating_ip:
-        cloud: becario
-        state: present
-        server: lb-web  # OJO: Algunas versiones piden el puerto del LB, probemos así primero
-        network: public
-        wait: yes
-      register: lb_ip
-
+    # 4. Mostrar Resultados
     - debug:
-        msg: "CLUSTER LISTO EN: http://{{ lb_ip.floating_ip.floating_ip_address }}"
+        msg: 
+          - "¡CLUSTER DESPLEGADO!"
+          - "Web-01: http://{{ web01.server.accessIPv4 }}"
+          - "Web-02: http://{{ web02.server.accessIPv4 }}"
