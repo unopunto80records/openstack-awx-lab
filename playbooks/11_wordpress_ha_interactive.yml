@@ -4,23 +4,33 @@
   gather_facts: no
 
   vars:
-    # Script que se inyecta en las máquinas para instalar todo solo
+    # Script BLINDADO para instalar Docker en cualquier Ubuntu
     wordpress_install_script: |
       #!/bin/bash
-      # 1. Esperar a que apt termine sus actualizaciones automáticas (evita error de bloqueo)
+      # 1. Esperar desbloqueo de apt
       while fuser /var/lib/dpkg/lock >/dev/null 2>&1 ; do sleep 5; done
-      while fuser /var/lib/apt/lists/lock >/dev/null 2>&1 ; do sleep 5; done
       
-      # 2. Instalar Docker
-      apt-get update
-      apt-get install -y docker.io
-      systemctl start docker
-      systemctl enable docker
+      # 2. Instalar Docker usando el script oficial (Más robusto)
+      curl -fsSL https://get.docker.com -o get-docker.sh
+      sh get-docker.sh
       
-      # 3. Desplegar Base de Datos y WordPress
-      # (En un HA real la BD estaría fuera, aquí simulamos nodos completos)
-      docker run -d --name db -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=wordpress -e MYSQL_USER=wp_user -e MYSQL_PASSWORD=wp_pass mysql:5.7
-      docker run -d --name wordpress --link db:mysql -p 80:80 -e WORDPRESS_DB_HOST=db:3306 -e WORDPRESS_DB_USER=wp_user -e WORDPRESS_DB_PASSWORD=wp_pass wordpress:latest
+      # 3. Arrancar Base de Datos (MySQL)
+      docker run -d --name db \
+        -e MYSQL_ROOT_PASSWORD=secret \
+        -e MYSQL_DATABASE=wordpress \
+        -e MYSQL_USER=wp_user \
+        -e MYSQL_PASSWORD=wp_pass \
+        mysql:5.7
+
+      # 4. Arrancar WordPress
+      docker run -d --name wordpress \
+        --link db:mysql \
+        -p 80:80 \
+        -e WORDPRESS_DB_HOST=db:3306 \
+        -e WORDPRESS_DB_USER=wp_user \
+        -e WORDPRESS_DB_PASSWORD=wp_pass \
+        wordpress:latest
+
 
   tasks:
     # ---------------------------------------------------------
