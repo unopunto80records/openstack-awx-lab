@@ -1,0 +1,37 @@
+- name: Ejercicio 13 - Crear Usuario de Migración (Pág 14)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    # 1. Crear el Usuario (Solo el Admin puede hacer esto)
+    - name: Crear usuario 'usr_migration'
+      os_user:
+        cloud: openstack     # Credenciales Admin
+        state: present
+        name: usr_migration
+        password: "MigrationPass123!"
+        email: migration@telefonica.test
+        domain: default
+        enabled: true
+
+    # 2. Asignar permisos en el Proyecto HA1
+    - name: Asignar rol 'member' en HA1
+      os_user_role:
+        cloud: openstack
+        state: present
+        user: usr_migration
+        role: member
+        project: sbc_ibercom_ha1_pj
+
+    # 3. Asignar permisos en el Proyecto HA2
+    - name: Asignar rol 'member' en HA2
+      os_user_role:
+        cloud: openstack
+        state: present
+        user: usr_migration
+        role: member
+        project: sbc_ibercom_ha2_pj
+
+    - debug:
+        msg: "Usuario 'usr_migration' creado y asignado a los proyectos SBC."
