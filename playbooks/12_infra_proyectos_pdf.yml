@@ -1,0 +1,58 @@
+- name: Ejercicio 12 - Estructura de Proyectos PDF (Versión Corregida)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    # ---------------------------------------------------------
+    # PROYECTO 1: sbc_ibercom_ha1_pj
+    # ---------------------------------------------------------
+    - name: Crear Proyecto 'sbc_ibercom_ha1_pj'
+      os_project:
+        cloud: openstack  # Credenciales Admin
+        state: present
+        name: sbc_ibercom_ha1_pj
+        description: "Proyecto destino para migración SBC HA1 (Simulación)"
+        domain_id: default
+        enabled: true
+
+    - name: Establecer Quotas HA1
+      os_quota:
+        cloud: openstack
+        state: present
+        name: sbc_ibercom_ha1_pj
+        cores: 4
+        ram: 4096
+        instances: 5
+        network: 5          # <--- CORREGIDO (Singular)
+        floating_ips: 5
+        volumes: 10
+        gigabytes: 50
+
+    # ---------------------------------------------------------
+    # PROYECTO 2: sbc_ibercom_ha2_pj
+    # ---------------------------------------------------------
+    - name: Crear Proyecto 'sbc_ibercom_ha2_pj'
+      os_project:
+        cloud: openstack
+        state: present
+        name: sbc_ibercom_ha2_pj
+        description: "Proyecto destino para migración SBC HA2 (Simulación)"
+        domain_id: default
+        enabled: true
+
+    - name: Establecer Quotas HA2
+      os_quota:
+        cloud: openstack
+        state: present
+        name: sbc_ibercom_ha2_pj
+        cores: 4
+        ram: 4096
+        instances: 5
+        network: 5          # <--- CORREGIDO (Singular)
+        floating_ips: 5
+        volumes: 10
+        gigabytes: 50
+
+    - debug:
+        msg: "Proyectos y Quotas creados correctamente."
