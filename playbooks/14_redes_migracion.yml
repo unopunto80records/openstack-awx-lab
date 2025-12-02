@@ -1,0 +1,36 @@
+- name: Ejercicio 14 - Red Externa de Migración (PDF Pág 10)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    # 1. Crear la Red Externa (Provider Network)
+    - name: Crear Red Externa 'VLAN_216_HERR_MIGRAC_ALC3'
+      os_network:
+        cloud: openstack     # Admin
+        state: present
+        name: VLAN_216_HERR_MIGRAC_ALC3
+        external: true
+        provider_network_type: flat
+        provider_physical_network: physnet1  # Usamos el bridge que tenemos
+        shared: true  # Compartida para que el usr_migration pueda usarla
+        project: admin
+
+    # 2. Crear la Subred (Rango específico del PDF)
+    # NOTA: Como esto es un laboratorio, usaremos un rango ficticio que no choque
+    # con la red local, pero simulando ser el (172.28.88.0/24)
+    - name: Crear Subnet de Migración
+      os_subnet:
+        cloud: openstack
+        state: present
+        name: subnet_vlan_216
+        network_name: VLAN_216_HERR_MIGRAC_ALC3
+        cidr: 172.28.88.0/24       # Simulamos el rango del cliente
+        gateway_ip: 172.28.88.1
+        allocation_pool_start: 172.28.88.100
+        allocation_pool_end: 172.28.88.200
+        enable_dhcp: true
+        no_gateway_ip: false
+
+    - debug:
+        msg: "Red Externa de Migración creada (Simulación VLAN 216)."
