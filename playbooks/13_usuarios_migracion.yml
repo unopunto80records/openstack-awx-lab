@@ -11,7 +11,7 @@
         state: present
         name: usr_migration
         password: "MigrationPass123!"
-        email: migration@telefonica.test
+        email: migration@empresa.test
         domain: default
         enabled: true
 
