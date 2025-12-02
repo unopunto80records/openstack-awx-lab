@@ -1,0 +1,28 @@
+- name: Ejercicio 19 - Fase de Descubrimiento (Discovery)
+  hosts: migrator
+  gather_facts: no
+  collections:
+    - community.vmware
+
+  tasks:
+    - name: Conectar al vCenter y buscar VMs
+      community.vmware.vmware_vm_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        port: "{{ vcenter_port }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        datacenter: "{{ vcenter_datacenter }}"
+      register: vm_info
+
+    - name: Mostrar VMs encontradas para migrar
+      debug:
+        msg: 
+          - "---------------------------------------------"
+          - "MÁQUINA ENCONTRADA: {{ item.guest_name }}"
+          - "UUID: {{ item.uuid }}"
+          - "CPUs: {{ item.num_cpu }} | RAM: {{ item.memory_mb }} MB"
+          - "---------------------------------------------"
+      loop: "{{ vm_info.virtual_machines }}"
+      loop_control:
+        label: "{{ item.guest_name }}"
