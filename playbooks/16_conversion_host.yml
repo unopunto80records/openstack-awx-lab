@@ -13,11 +13,11 @@
 
   tasks:
     # 1. Descargar Imagen CentOS Stream 9 (La base del Conversion Host)
-    - name: Descargar Imagen CentOS Stream 9
-      get_url:
-        url: https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2
-        dest: /tmp/os_migrate_conv_image.qcow2
-        timeout: 600
+#    - name: Descargar Imagen CentOS Stream 9
+#      get_url:
+#        url: https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2
+#        dest: /tmp/os_migrate_conv_image.qcow2
+#        timeout: 600
 
     # 2. Subir Imagen a OpenStack
     - name: Subir Imagen 'os_migrate_conv_image'
