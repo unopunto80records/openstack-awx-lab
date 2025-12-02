@@ -4,6 +4,8 @@
   gather_facts: no
 
   tasks:
+
+
     # 1. Crear la Red Externa (Provider Network)
     - name: Crear Red Externa 'VLAN_216_HERR_MIGRAC_ALC3'
       os_network:
@@ -11,9 +13,10 @@
         state: present
         name: VLAN_216_HERR_MIGRAC_ALC3
         external: true
-        provider_network_type: flat
-        provider_physical_network: physnet1  # Usamos el bridge que tenemos
-        shared: true  # Compartida para que el usr_migration pueda usarla
+        provider_network_type: flat        # <--- TIENE QUE PONER FLAT
+        provider_physical_network: physnet1
+        # provider_segmentation_id: 216    # <--- ESTA LÍNEA BORRADA O COMENTADA (#)
+        shared: true
         project: admin
 
     # 2. Crear la Subred (Rango específico del PDF)
