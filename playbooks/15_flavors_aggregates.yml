@@ -1,0 +1,76 @@
+- name: Ejercicio 15 - Flavors y Host Aggregates (PDF Pág 9 y 17)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    # ---------------------------------------------------------
+    # 1. FLAVOR PARA EL CONVERSION HOST (P 9)
+    # ---------------------------------------------------------
+    - name: Crear Flavor 'migration-host-2c-4g-20d'
+      os_nova_flavor:
+        cloud: openstack   # Admin
+        state: present
+        name: migration-host-2c-4g-20d
+        ram: 4096
+        vcpus: 2
+        disk: 20
+        is_public: yes
+
+    # Establecer propiedades avanzadas (HugePages, CPU pinning...)
+    # Nota: En un entorno virtual anidado algunas de estas podrían no tener efecto real,
+    # pero las configuramos para cumplir con el diseño.
+    - name: Configurar Metadata del Flavor de Migración
+      command: >
+        openstack flavor set migration-host-2c-4g-20d
+        --property hw:cpu_policy=dedicated
+        --property hw:cpu_threads=2
+        --property hw:emulator_threads_policy=share
+        --property hw:mem_page_size=1048576
+        --property hw:vif_multiqueue_enabled=true
+        --property disp=si
+        --property evacuable=true
+      environment:
+        OS_CLOUD: openstack
+
+    # ---------------------------------------------------------
+    # 2. FLAVORS PARA LOS SBCs (P 16)
+    # ---------------------------------------------------------
+    - name: Crear Flavor 'SVA-Ibercom-4CPU-8GB-SMT-HA1'
+      os_nova_flavor:
+        cloud: openstack
+        state: present
+        name: SVA-Ibercom-4CPU-8GB-SMT-HA1
+        ram: 4096   # Reducido de 8GB a 4GB para el Lab
+        vcpus: 2    # Reducido de 4 a 2 para el Lab
+        disk: 20
+        is_public: yes
+      # En un entorno real, aquí limitaríamos el acceso al proyecto específico
+      # pero para el lab lo dejamos público para facilitar pruebas.
+
+    - name: Setear propiedades SBC HA1
+      command: >
+        openstack flavor set SVA-Ibercom-4CPU-8GB-SMT-HA1
+        --property sbc=ha1
+        --property red=10g
+      environment:
+        OS_CLOUD: openstack
+
+    # ---------------------------------------------------------
+    # 3. HOST AGGREGATES (P 17)
+    # Creamos las zonas lógicas
+    # ---------------------------------------------------------
+    - name: Crear Host Aggregate 'Sbc_ibercom_ha1'
+      os_nova_host_aggregate:
+        cloud: openstack
+        state: present
+        name: Sbc_ibercom_ha1
+
+    - name: Crear Host Aggregate 'Sbc_ibercom_ha2'
+      os_nova_host_aggregate:
+        cloud: openstack
+        state: present
+        name: Sbc_ibercom_ha2
+
+    - debug:
+        msg: "Infraestructura de Cómputo (Flavors y Agregados) lista."
