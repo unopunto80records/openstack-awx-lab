@@ -1,0 +1,94 @@
+- name: Ejercicio 16 - Despliegue del Conversion Host (P 8-12)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Script de inicialización para instalar herramientas de migración
+    migration_tools_script: |
+      #!/bin/bash
+      dnf update -y
+      dnf install -y qemu-img virt-v2v nbdkit
+      echo "Herramientas de migración instaladas" > /tmp/migration_ready.txt
+
+  tasks:
+    # 1. Descargar Imagen CentOS Stream 9 (La base del Conversion Host)
+    - name: Descargar Imagen CentOS Stream 9
+      get_url:
+        url: https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2
+        dest: /tmp/os_migrate_conv_image.qcow2
+        timeout: 600
+
+    # 2. Subir Imagen a OpenStack
+    - name: Subir Imagen 'os_migrate_conv_image'
+      os_image:
+        cloud: openstack
+        state: present
+        name: os_migrate_conv_image
+        container_format: bare
+        disk_format: qcow2
+        filename: /tmp/os_migrate_conv_image.qcow2
+        is_public: yes
+
+    # 3. Seguridad (SSH y Puerto NBD 10809)
+    - name: Crear Grupo de Seguridad 'os_migrate_conv'
+      os_security_group:
+        cloud: openstack
+        state: present
+        name: os_migrate_conv
+        description: "Reglas para el Host de Conversión"
+
+    - name: Abrir SSH (22)
+      os_security_group_rule:
+        cloud: openstack
+        security_group: os_migrate_conv
+        protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+        remote_ip_prefix: 0.0.0.0/0
+
+    - name: Abrir NBD (10809) - Transferencia de datos
+      os_security_group_rule:
+        cloud: openstack
+        security_group: os_migrate_conv
+        protocol: tcp
+        port_range_min: 10809
+        port_range_max: 10809
+        remote_ip_prefix: 0.0.0.0/0
+
+    # 4. Crear Llave SSH
+    - name: Crear Llave 'os_migrate_conv_key'
+      os_keypair:
+        cloud: openstack
+        state: present
+        name: os_migrate_conv_key
+      register: conv_key
+
+    - name: Guardar Llave Privada
+      copy:
+        content: "{{ conv_key.key.private_key }}"
+        dest: "/tmp/conversion_host.pem"
+        mode: '0600'
+      when: conv_key.changed
+
+    # 5. LANZAR LA INSTANCIA
+    - name: Lanzar 'conversion-host'
+      os_server:
+        cloud: openstack
+        state: present
+        name: conversion-host
+        image: os_migrate_conv_image
+        flavor: migration-host-2c-4g-20d  # El Flavor especial del Ejercicio 15
+        network: VLAN_216_HERR_MIGRAC_ALC3 # La red del Ejercicio 14
+        security_groups: os_migrate_conv
+        key_name: os_migrate_conv_key
+        userdata: "{{ migration_tools_script }}"
+        wait: yes
+        timeout: 300
+      register: conv_host
+
+    - debug:
+        msg: 
+          - "¡CONVERSION HOST DESPLEGADO!"
+          - "IP de Migración: {{ conv_host.server.accessIPv4 }}"
+          - "Listo para recibir datos de VMware."
