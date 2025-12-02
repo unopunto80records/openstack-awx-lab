@@ -1,0 +1,36 @@
+- name: Ejercicio 17 - Instalar Entorno de Simulación VMware (Binarios)
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  become: true
+
+  tasks:
+    # 1. Instalar Git (necesario para la colección)
+    - name: Instalar Git
+      dnf:
+        name: git
+        state: present
+
+    # 2. Instalar la Colección de Migración
+    - name: Instalar colección os_migrate.vmware_migration_kit
+      command: ansible-galaxy collection install os_migrate.vmware_migration_kit
+      become_user: admin
+
+    # 3. Descargar el simulador ya compilado (Más seguro que compilar)
+    - name: Descargar vcsim
+      get_url:
+        url: https://github.com/vmware/govmomi/releases/download/v0.37.1/vcsim_Linux_x86_64.tar.gz
+        dest: /tmp/vcsim.tar.gz
+        mode: '0755'
+
+    # 4. Descomprimir e instalar
+    - name: Descomprimir e instalar en /usr/local/bin
+      unarchive:
+        src: /tmp/vcsim.tar.gz
+        dest: /usr/local/bin/
+        remote_src: yes
+        include: 
+          - vcsim
+
+    - debug:
+        msg: "Simulador instalado en /usr/local/bin/vcsim"
