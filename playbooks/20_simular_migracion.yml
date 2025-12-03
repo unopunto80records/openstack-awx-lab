@@ -1,0 +1,73 @@
+- name: Ejercicio 20 - Simulación de Migración (Mapping & Provisioning)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  collections:
+    - community.vmware
+    - openstack.cloud
+
+  vars:
+    vm_a_migrar: "DC0_H0_VM0"
+    # Mapeo: Si en VMware tiene X recursos, en OpenStack usamos este Flavor
+    flavor_map:
+      small: "m1.nano"
+      medium: "m1.small"
+      large: "m1.medium"
+
+  tasks:
+    # 1. Leer datos del Origen (Simulador)
+    - name: Obtener datos de la VM en VMware
+      community.vmware.vmware_vm_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        port: "{{ vcenter_port }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+      register: vm_info
+
+    # 2. Filtrar y encontrar nuestra máquina objetivo
+    - name: Extraer datos de la VM objetivo
+      set_fact:
+        vm_data: "{{ item }}"
+      loop: "{{ vm_info.virtual_machines }}"
+      when: item.guest_name == vm_a_migrar
+
+    - name: Validar que la VM existe
+      fail:
+        msg: "No se encontró la máquina {{ vm_a_migrar }} en el simulador."
+      when: vm_data is not defined
+
+    # 3. Calcular el Flavor necesario (Lógica de Migración)
+    # El simulador da VMs de 32MB RAM, así que usaremos m1.nano
+    - name: Definir Flavor destino
+      set_fact:
+        flavor_destino: "m1.nano" 
+        
+    - debug:
+        msg: 
+          - "--- PLAN DE MIGRACIÓN GENERADO ---"
+          - "Origen: {{ vm_data.guest_name }} ({{ vm_data.power_state }})"
+          - "UUID Origen: {{ vm_data.uuid }}"
+          - "Destino: OpenStack Proyecto 'Laboratorio'"
+          - "Flavor Calculado: {{ flavor_destino }}"
+          - "Red Destino: VLAN_216_HERR_MIGRAC_ALC3"
+          - "----------------------------------"
+
+    # 4. EJECUTAR LA "MIGRACIÓN" (Crear la VM en OpenStack)
+    # Como no podemos copiar el disco del simulador (está vacío),
+    # usamos la imagen 'cirros' para simular que los datos han llegado.
+    - name: Provisionar VM Migrada en OpenStack
+      os_server:
+        cloud: becario
+        state: present
+        name: "{{ vm_a_migrar }}_MIGRATED"
+        image: "cirros-0.6.2"   # En una migración real, aquí iría el disco convertido
+        flavor: "{{ flavor_destino }}"
+        network: VLAN_216_HERR_MIGRAC_ALC3
+        security_groups: reglas-basicas
+        key_name: llave-becario
+        wait: yes
+      register: migracion_result
+
+    - debug:
+        msg: "MIGRACIÓN COMPLETADA. Nueva IP: {{ migracion_result.server.accessIPv4 }}"
