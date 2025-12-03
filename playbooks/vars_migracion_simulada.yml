@@ -1,0 +1,40 @@
+# --- RUTAS Y DIRECTORIOS ---
+os_migrate_data_dir: /tmp/os_migrate_data
+os_migrate_logs_dir: /tmp/os_migrate_logs
+
+# --- CONVERSION HOST (El intermediario) ---
+# La IP que hemos verificado que funciona
+os_migrate_conversion_host_address: 172.28.88.195
+os_migrate_conversion_host_user: cloud-user
+# La ruta de la clave DENTRO del contenedor de AWX (donde se generó)
+os_migrate_conversion_host_ssh_private_key: /tmp/conversion_host.pem
+
+# --- ORIGEN (vCenter Simulado) ---
+vcenter_hostname: 127.0.0.1
+vcenter_port: 8989
+vcenter_username: admin
+vcenter_password: pass123
+vcenter_validate_certs: false
+vcenter_datacenter: DC0
+
+# --- DESTINO (OpenStack) ---
+os_auth_url: http://192.168.94.133:5000/v3
+os_username: admin
+os_password: kolla
+os_project_name: Laboratorio
+os_user_domain_name: Default
+os_project_domain_name: Default
+os_region_name: RegionOne
+
+# --- QUÉ MIGRAR ---
+vms_list:
+  - name: DC0_H0_VM0
+
+# --- MAPEO DE RECURSOS ---
+# Traducimos la red "VM Network" del simulador a tu red "Red-Becarios"
+network_map:
+  "VM Network": "Red-Becarios"
+  "DVS-Network": "Red-Becarios"
+
+# Usar flavors existentes en lugar de intentar crearlos
+use_existing_flavor: true

@@ -1,0 +1,34 @@
+- name: Ejercicio 21 - Ejecutar VMware Migration Kit (Simulación)
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+
+  # Cargamos las variables
+  vars_files:
+    - vars_migracion_simulada.yml
+
+  tasks:
+    # FASE 1: PRELUDE (Validaciones)
+    - name: Validar requisitos y conexión
+      include_role:
+        name: os_migrate.vmware_migration_kit.prelude
+
+    # FASE 2: EXPORT (Leer VMware)
+    - name: Exportar metadatos de la VM desde vCenter
+      include_role:
+        name: os_migrate.vmware_migration_kit.export_metadata
+
+    # FASE 3: CONVERT (Traducir a OpenStack)
+    - name: Convertir metadatos a formato OpenStack
+      include_role:
+        name: os_migrate.vmware_migration_kit.convert_metadata
+
+    # FASE 4: IMPORT (Migrar)
+    # Usamos ignore_errors porque el disco del simulador fallará al copiar
+    - name: Ejecutar migración de carga de trabajo
+      include_role:
+        name: os_migrate.vmware_migration_kit.import_workloads
+      ignore_errors: yes
+      
+    - debug:
+        msg: "Proceso de orquestación finalizado. (Nota: El error final de disco es esperado en simulación)"
