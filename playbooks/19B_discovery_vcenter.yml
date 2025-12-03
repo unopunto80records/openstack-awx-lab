@@ -1,0 +1,45 @@
+- name: Ejercicio 19 - Discovery Completo y Exportación JSON
+  hosts: migrator
+  gather_facts: no
+  collections:
+    - community.vmware
+
+  tasks:
+    # 1. Obtener la lista completa
+    - name: Escanear vCenter Completo
+      community.vmware.vmware_vm_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        port: "{{ vcenter_port }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+      register: resultado_scan
+
+    # 2. Guardar en fichero (Lo que pedías)
+    - name: Exportar datos a JSON
+      copy:
+        content: "{{ resultado_scan.virtual_machines | to_nice_json }}"
+        dest: "/home/admin/vcenter_inventory.json"
+    
+    - debug:
+        msg: " Inventario completo guardado en /home/admin/vcenter_inventory.json"
+
+    # 3. Mostrar resumen en pantalla (Bucle)
+    - name: Listado de Máquinas Encontradas
+      debug:
+        msg: 
+          - "VM: {{ item.guest_name }}"
+          - "Estado: {{ item.power_state }}"
+          - "UUID: {{ item.uuid }}"
+          - "-------------------------"
+      loop: "{{ resultado_scan.virtual_machines }}"
+      loop_control:
+        label: "{{ item.guest_name }}"
+
+    # 4. Ejemplo de Filtro: Mostrar solo las que se llamen "VM0"
+    # (Esto responde a tu duda de filtrar una específica)
+    - name: Buscar máquina específica (Ejemplo VM0)
+      debug:
+        msg: "¡ENCONTRADA! La máquina {{ item.guest_name }} existe."
+      loop: "{{ resultado_scan.virtual_machines }}"
+      when: "'VM0' in item.guest_name"

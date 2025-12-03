@@ -1,4 +1,4 @@
-- name: Ejercicio 19 - Fase de Descubrimiento (Discovery)
+- name: Ejercicio 19 - Fase de Descubrimiento (Discovery - Modo Diagnóstico)
   hosts: migrator
   gather_facts: no
   collections:
@@ -12,17 +12,9 @@
         password: "{{ vcenter_password }}"
         port: "{{ vcenter_port }}"
         validate_certs: "{{ vcenter_validate_certs }}"
-        datacenter: "{{ vcenter_datacenter }}"
       register: vm_info
 
-    - name: Mostrar VMs encontradas para migrar
+    - name: ¡MÁQUINAS ENCONTRADAS! (Ver datos brutos)
       debug:
-        msg: 
-          - "---------------------------------------------"
-          - "MÁQUINA ENCONTRADA: {{ item.guest_name }}"
-          - "UUID: {{ item.uuid }}"
-          - "CPUs: {{ item.num_cpu }} | RAM: {{ item.memory_mb }} MB"
-          - "---------------------------------------------"
-      loop: "{{ vm_info.virtual_machines }}"
-      loop_control:
-        label: "{{ item.guest_name }}"
+        # Imprimimos solo la primera máquina para no llenar la pantalla
+        var: vm_info.virtual_machines[0]

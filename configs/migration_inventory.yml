@@ -1,31 +1,26 @@
 all:
   children:
-    # GRUPO 1: El Orquestador (Mi máquina local)
     migrator:
       hosts:
         localhost:
           ansible_connection: local
-          ansible_python_interpreter: /usr/bin/python3
+          # CORRECCIÓN 1: Ruta absoluta
+          ansible_python_interpreter: /home/admin/kolla-venv/bin/python
           
-          # CREDENCIALES DEL SIMULADOR VCSIM
+          # CORRECCIÓN 2: Credenciales nuevas
           vcenter_hostname: 127.0.0.1
           vcenter_port: 8989
-          vcenter_username: administrator@vsphere.local
-          vcenter_password: "VMware1!"
+          vcenter_username: admin
+          vcenter_password: "pass123"
           vcenter_validate_certs: false
-          
-          # ESTRUCTURA POR DEFECTO DE VCSIM
           vcenter_datacenter: DC0
           vcenter_cluster: DC0_C0
 
-    # GRUPO 2: El "Camión de Mudanzas" (Conversion Host)
     conversion_host:
       hosts:
         conversion_host_1:
-          ansible_host: 172.28.88.195   # <--- TU IP
-          ansible_user: cloud-user      # Usuario por defecto de CentOS Cloud
+          ansible_host: 172.28.88.195
+          ansible_user: cloud-user
           ansible_ssh_private_key_file: /tmp/conversion_host.pem
-          
-          # Variables requeridas por OS-Migrate
           os_migrate_conversion_host_address: 172.28.88.195
           os_migrate_conversion_host_type: openstack
